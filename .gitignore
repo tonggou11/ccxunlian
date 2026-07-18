@@ -1,1 +1,8 @@
 config.py
+venv/
+__pycache__/
+chroma_data/
+chroma_web_data/
+output/
+*.txt
+!requirements.txt
