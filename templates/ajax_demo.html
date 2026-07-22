@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>AJAX 教学 Demo</title>
+    <style>
+        body {
+            max-width: 500px;
+            margin: 50px auto;
+            font-family: sans-serif;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0ff;
+            border-radius: 8px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>传统方式 vs AJAX 方式</h2>
+
+    <!-- 传统方式：点按钮 → 整个页面刷新 -->
+    <h3>❌ 传统方式（表单提交）</h3>
+    <form method="POST">
+        <input name="a" type="number" placeholder="数字A">
+        <input name="b" type="number" placeholder="数字B">
+        <button type="submit">传统提交</button>
+    </form>
+    <p style="color: gray;">↑ 点这个按钮，整个页面会刷新，输入框的内容会丢失</p>
+
+    <hr>
+
+    <!-- AJAX 方式：点按钮 → 只更新结果显示 -->
+    <h3>✅ AJAX 方式（不刷新页面）</h3>
+    <input id="numA" type="number" placeholder="数字A">
+    <input id="numB" type="number" placeholder="数字B">
+    <button onclick="ajaxSubmit()">AJAX 提交</button>
+    <p style="color: gray;">↑ 点这个按钮，页面不动，只有下面出现结果</p>
+
+    <!-- 结果显示区 -->
+    <div class="result" id="resultBox">
+        <strong id="resultText"></strong>
+    </div>
+
+    <script>
+        async function ajaxSubmit() {
+            // ① 拿到用户输入
+            var a = parseInt(document.getElementById('numA').value);
+            var b = parseInt(document.getElementById('numB').value);
+
+            // ② 用 fetch 发 POST 请求（相当于 Python 的 requests.post）
+            var response = await fetch('/api/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ a: a, b: b })   // 把 JS 对象转成 JSON 字符串
+            });
+
+            // ③ 拿到服务器返回的 JSON，转成 JS 对象
+            var data = await response.json();
+
+            // ④ 更新页面（只改这一小块，不刷新整个页面）
+            document.getElementById('resultText').innerText = data.message;
+            document.getElementById('resultBox').style.display = 'block';
+        }
+    </script>
+
+</body>
+</html>
