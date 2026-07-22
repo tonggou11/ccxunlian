@@ -1,20 +1,25 @@
-# 通讯录管理系统
+import sqlite3
 
-# 启动时从文件读取（格式：姓名,电话）
-contacts = []
-try:
-    with open("contacts.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split(",")
-            name = parts[0]
-            phone = parts[1]                        # 电话是字符串，不是数字
-            contacts.append({"name": name, "phone": phone})
-    print(f"已从文件加载 {len(contacts)} 条联系人")
-except FileNotFoundError:
-    print("首次使用，尚无保存的联系人")
+# ============ 连接数据库 ============
+conn = sqlite3.connect("contacts.db")   # 没有这个文件就自动创建
+cur = conn.cursor()
+
+# ============ 建表（启动时执行一次）============
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS contacts (
+        id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        name    TEXT    NOT NULL,
+        phone   TEXT    NOT NULL
+    )
+""")
+conn.commit()   # 立即生效
+
+# 查一下表里现在有多少条
+cur.execute("SELECT COUNT(*) FROM contacts")
+count = cur.fetchone()[0]
+print(f"数据库中已有 {count} 条联系人")
+
+# ============ 主程序 ============
 
 while True:
     print("=" * 30)
@@ -30,38 +35,43 @@ while True:
 
     if choice == "1":
         name = input("请输入联系人姓名：")
-        phone = input("请输入联系人电话：")          # 电话直接用字符串，不转float
-        contacts.append({"name": name, "phone": phone})
+        phone = input("请输入联系人电话：")
+        # INSERT INTO 表名 (列1, 列2) VALUES (值1, 值2)
+        # ? 是占位符，防止 SQL 注入（跟 f-string 拼字符串的效果一样但更安全）
+        cur.execute(
+            "INSERT INTO contacts (name, phone) VALUES (?, ?)",
+            (name, phone),
+        )
+        conn.commit()   # 插入/修改/删除后必须 commit，不然白干
         print(f"{name} 的电话 {phone} 已添加！")
 
     elif choice == "2":
-        if len(contacts) == 0:
+        cur.execute("SELECT id, name, phone FROM contacts")
+        rows = cur.fetchall()   # 拿到所有结果行
+        if len(rows) == 0:
             print("还没有联系人，请先添加！")
         else:
-            print("姓名\t电话")
-            print("-" * 20)
-            for c in contacts:
-                print(f"{c['name']}\t{c['phone']}")
+            print("ID\t姓名\t电话")
+            print("-" * 30)
+            for row in rows:
+                print(f"{row[0]}\t{row[1]}\t{row[2]}")
 
     elif choice == "3":
-        if len(contacts) == 0:
-            print("还没有联系人，无法搜索！")
+        search_name = input("请输入要搜索的姓名：")
+        # SELECT ... WHERE name = ?   →  只查名字匹配的那条
+        cur.execute(
+            "SELECT id, name, phone FROM contacts WHERE name = ?",
+            (search_name,),
+        )
+        row = cur.fetchone()   # 拿一条（名字是唯一的）
+        if row:
+            print(f"{row[1]} 的电话是：{row[2]}")
         else:
-            search_name = input("请输入要搜索的姓名：")     # ① 问你要搜谁
-            found = False                                 # ② 先假设"没找到"
-            for c in contacts:                            # ③ 一个一个翻
-                if c["name"] == search_name:              # ④ 名字对上了！
-                    print(f"{c['name']} 的电话是：{c['phone']}")
-                    found = True                          # ⑤ 找到了，标记改成True
-                    break                                 # ⑥ 找到了就别继续翻了
-            if not found:                                 # ⑦ 翻完了还是False
-                print(f"未找到联系人：{search_name}")
+            print(f"未找到联系人：{search_name}")
 
     elif choice == "4":
-        with open("contacts.txt", "w", encoding="utf-8") as f:
-            for c in contacts:
-                f.write(f"{c['name']},{c['phone']}\n")
-        print(f"已保存 {len(contacts)} 条联系人，再见！")
+        conn.close()   # 关掉数据库连接
+        print("再见！")
         break
 
     else:
